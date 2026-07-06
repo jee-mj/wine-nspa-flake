@@ -1,0 +1,61 @@
+{
+  "nodes": {
+    "linux-nspa-kernel": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781621768,
+        "narHash": "sha256-FTF6sH1ggwemHt1lN0oZkec+q3RYP8JmCLBs+aPateY=",
+        "owner": "nine7nine",
+        "repo": "Linux-NSPA-pkgbuild",
+        "rev": "eccca594aa733be4c6c2f68314e86628a9f07c55",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nine7nine",
+        "repo": "Linux-NSPA-pkgbuild",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1783224372,
+        "narHash": "sha256-8i/87eeoqiGE4yOTjwSA3Eh/ziJRQEmd/unYU+K27sk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "linux-nspa-kernel": "linux-nspa-kernel",
+        "nixpkgs": "nixpkgs",
+        "wine-nspa-src": "wine-nspa-src"
+      }
+    },
+    "wine-nspa-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780806680,
+        "narHash": "sha256-l4c7dhGaCj9Rwf6OSn418+V9cZHg61PL0IDuIq8UJQE=",
+        "owner": "nine7nine",
+        "repo": "wine-nspa-src",
+        "rev": "aa4738d508c53a4b41a7d8e97e43d0913e2fb604",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nine7nine",
+        "repo": "wine-nspa-src",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
