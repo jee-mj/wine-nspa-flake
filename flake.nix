@@ -18,7 +18,14 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 
-      wine-nspa = pkgs.wineWow64Packages.stableFull.overrideAttrs (prev: rec {
+      # Wine-NSPA identifies as Wine 11.8.  Use nixpkgs' development Wine
+      # package as the build template rather than stableFull (11.0), so the
+      # generated build inputs, patches, and configure surface stay close to
+      # the upstream Wine generation NSPA rebased onto.  Avoid stagingFull here:
+      # Wine-NSPA is already a forked source tree and mixing Wine-Staging's
+      # source-family assumptions into it adds another patch stack without a
+      # demonstrated runtime benefit.
+      wine-nspa = pkgs.wineWow64Packages.unstableFull.overrideAttrs (prev: rec {
         pname = "wine-nspa";
         version = "11.8";
         src = wine-nspa-src;
