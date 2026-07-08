@@ -104,9 +104,9 @@
       };
 
       overlays.default = final: prev: {
-        wine-nspa = self.packages.${final.system}.wine-nspa;
-        linux-nspa = self.packages.${final.system}.linux-nspa;
-        linuxPackages_nspa = self.legacyPackages.${final.system}.linux-nspaPackages;
+        wine-nspa = self.packages.${final.stdenv.hostPlatform.system}.wine-nspa;
+        linux-nspa = self.packages.${final.stdenv.hostPlatform.system}.linux-nspa;
+        linuxPackages_nspa = self.legacyPackages.${final.stdenv.hostPlatform.system}.linux-nspaPackages;
       };
 
       checks.${system} = {
