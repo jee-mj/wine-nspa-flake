@@ -211,7 +211,7 @@ index 605b025..c8fb25c 100644
  }
  
 diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
-index 806c197..7511a0b 100644
+index 806c197..7df9d14 100644
 --- a/dlls/wineusb.sys/wineusb.c
 +++ b/dlls/wineusb.sys/wineusb.c
 @@ -37,6 +37,10 @@
@@ -235,10 +235,11 @@ index 806c197..7511a0b 100644
      LIST_ENTRY irp_list;
  };
  
-@@ -480,6 +487,24 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -480,6 +487,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
          }
  
          case IRP_MN_START_DEVICE:
++            TRACE("START_DEVICE for VID %04x PID %04x\n", device->vendor, device->product);
 +            if (!device->link_name.Buffer)
 +            {
 +                if ((ret = IoRegisterDeviceInterface( device_obj, &GUID_DEVINTERFACE_USB_DEVICE,
@@ -260,7 +261,7 @@ index 806c197..7511a0b 100644
              ret = STATUS_SUCCESS;
              break;
  
-@@ -499,6 +524,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -499,6 +525,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
              assert(device->removed);
              remove_pending_irps(device);
  
