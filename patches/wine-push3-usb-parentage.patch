@@ -210,10 +210,10 @@ index 0c1361d..3783f04 100644
      ok(ret, "failed to get interface, error %#lx\n", GetLastError());
      ok(IsEqualGUID(&iface.InterfaceClassGuid, &child_class),
 diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
-index f6bfcc4..4102ab3 100644
+index f6bfcc4..d557745 100644
 --- a/dlls/setupapi/devinst.c
 +++ b/dlls/setupapi/devinst.c
-@@ -385,6 +385,19 @@ static BOOL is_linked(HKEY key)
+@@ -385,6 +385,18 @@ static BOOL is_linked(HKEY key)
          RegCloseKey(control_key);
      }
  
@@ -223,10 +223,9 @@ index f6bfcc4..4102ab3 100644
 +     * whose volatile Control\Linked key was lost across a restart. */
 +    if (!ret)
 +    {
-+        WCHAR symlink[1];
-+        DWORD len = 0;
-+        if (!RegQueryValueExW(key, L"SymbolicLink", NULL, &type, (BYTE *)symlink, &len)
-+                && type == REG_SZ && len > 2)
++        type = 0;
++        if (!RegQueryValueExW(key, L"SymbolicLink", NULL, &type, NULL, NULL)
++                && type == REG_SZ)
 +            ret = TRUE;
 +    }
 +
