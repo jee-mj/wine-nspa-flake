@@ -259,7 +259,7 @@ index 605b025..c8fb25c 100644
  }
  
 diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
-index 806c197..7df9d14 100644
+index 806c197..b67239c 100644
 --- a/dlls/wineusb.sys/wineusb.c
 +++ b/dlls/wineusb.sys/wineusb.c
 @@ -37,6 +37,10 @@
@@ -283,7 +283,68 @@ index 806c197..7df9d14 100644
      LIST_ENTRY irp_list;
  };
  
-@@ -480,6 +487,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -140,6 +147,60 @@ static void add_unix_device(const struct usb_add_device_event *event)
+     device->revision = event->revision;
+     device->usbver = event->usbver;
+ 
++    /* Directly register device interface GUIDs in the registry so that
++     * user-space USB libraries (e.g. libusb Windows backend) can discover
++     * these PDOs via SetupAPI device interface enumeration during HUB_PASS
++     * and DEV_PASS, before the PnP manager sends IRP_MN_START_DEVICE. */
++    {
++        WCHAR link_path[200], iface_key[256], instance_id[100];
++        UNICODE_STRING link_name;
++
++        swprintf( instance_id, ARRAY_SIZE(instance_id),
++                  L"USB\\VID_%04X&PID_%04X\\%u&%u&%u&%u",
++                  device->vendor, device->product, device->usbver,
++                  device->revision, device->busnum, device->portnum );
++
++        swprintf( link_path, ARRAY_SIZE(link_path),
++                  L"\\\\?\\USB#VID_%04X&PID_%04X#%u&%u&%u&%u",
++                  device->vendor, device->product, device->usbver,
++                  device->revision, device->busnum, device->portnum );
++
++        RtlInitUnicodeString( &link_name, link_path );
++
++        /* Register GUID_DEVINTERFACE_USB_DEVICE for all PDOs. */
++        swprintf( iface_key, ARRAY_SIZE(iface_key),
++                  L"\\Registry\\Machine\\System\\CurrentControlSet\\Control\\"
++                  L"DeviceClasses\\{A5DCBF10-6530-11D2-901F-00C04FB951ED}\\\\"
++                  L"?\\USB#VID_%04X&PID_%04X#%u&%u&%u&%u#{A5DCBF10-6530-11D2-901F-00C04FB951ED}",
++                  device->vendor, device->product, device->usbver,
++                  device->revision, device->busnum, device->portnum );
++        RtlWriteRegistryValue( RTL_REGISTRY_ABSOLUTE, iface_key,
++                               L"DeviceInstance", REG_SZ, instance_id,
++                               (wcslen(instance_id) + 1) * sizeof(WCHAR) );
++        wcscat( iface_key, L"\\#" );
++        RtlWriteRegistryValue( RTL_REGISTRY_ABSOLUTE, iface_key,
++                               L"SymbolicLink", REG_SZ, link_path,
++                               (wcslen(link_path) + 1) * sizeof(WCHAR) );
++
++        /* Register GUID_DEVINTERFACE_USB_HUB for hub-class devices. */
++        if (!(device->interface) && device->class == 0x09)
++        {
++            swprintf( iface_key, ARRAY_SIZE(iface_key),
++                      L"\\Registry\\Machine\\System\\CurrentControlSet\\Control\\"
++                      L"DeviceClasses\\{F18A0E88-C30C-11D0-8815-00A0C906BED8}\\\\"
++                      L"?\\USB#VID_%04X&PID_%04X#%u&%u&%u&%u#{F18A0E88-C30C-11D0-8815-00A0C906BED8}",
++                      device->vendor, device->product, device->usbver,
++                      device->revision, device->busnum, device->portnum );
++            RtlWriteRegistryValue( RTL_REGISTRY_ABSOLUTE, iface_key,
++                                   L"DeviceInstance", REG_SZ, instance_id,
++                                   (wcslen(instance_id) + 1) * sizeof(WCHAR) );
++            wcscat( iface_key, L"\\#" );
++            RtlWriteRegistryValue( RTL_REGISTRY_ABSOLUTE, iface_key,
++                                   L"SymbolicLink", REG_SZ, link_path,
++                                   (wcslen(link_path) + 1) * sizeof(WCHAR) );
++        }
++    }
++
+     EnterCriticalSection(&wineusb_cs);
+     list_add_tail(&device_list, &device->entry);
+     LeaveCriticalSection(&wineusb_cs);
+@@ -480,6 +541,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
          }
  
          case IRP_MN_START_DEVICE:
@@ -309,7 +370,7 @@ index 806c197..7df9d14 100644
              ret = STATUS_SUCCESS;
              break;
  
-@@ -499,6 +525,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -499,6 +579,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
              assert(device->removed);
              remove_pending_irps(device);
  
