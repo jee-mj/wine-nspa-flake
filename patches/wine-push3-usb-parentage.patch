@@ -72,7 +72,7 @@ index 75fb67b..213eb7f 100644
      ret = CM_Get_DevNode_PropertyW( node, &DEVPKEY_Device_Children, &type, (BYTE *)buffer, &len, 0 );
      ok_x4( ret, ==, CR_NO_SUCH_VALUE );
 diff --git a/dlls/ntoskrnl.exe/pnp.c b/dlls/ntoskrnl.exe/pnp.c
-index ebb8ba1..882a66f 100644
+index ebb8ba1..3c51c50 100644
 --- a/dlls/ntoskrnl.exe/pnp.c
 +++ b/dlls/ntoskrnl.exe/pnp.c
 @@ -419,18 +419,18 @@ static void create_dyn_data_key( DEVICE_OBJECT *device )
@@ -184,6 +184,15 @@ index ebb8ba1..882a66f 100644
      SetupDiDestroyDeviceInfoList( set );
  }
  
+@@ -1190,7 +1230,7 @@ NTSTATUS WINAPI IoRegisterDeviceInterface(DEVICE_OBJECT *device, const GUID *cla
+     if ((status = get_device_instance_id_cached( device, device_instance_id )))
+         return status;
+ 
+-    set = SetupDiGetClassDevsW( class_guid, NULL, NULL, DIGCF_DEVICEINTERFACE );
++    set = SetupDiGetClassDevsW( NULL, NULL, NULL, DIGCF_ALLCLASSES );
+     if (set == INVALID_HANDLE_VALUE) return STATUS_UNSUCCESSFUL;
+ 
+     if (!SetupDiCreateDeviceInfoW( set, device_instance_id, class_guid, NULL, NULL, 0, &sp_device )
 diff --git a/dlls/ntoskrnl.exe/tests/ntoskrnl.c b/dlls/ntoskrnl.exe/tests/ntoskrnl.c
 index 0c1361d..3783f04 100644
 --- a/dlls/ntoskrnl.exe/tests/ntoskrnl.c
@@ -270,17 +279,10 @@ index 605b025..c8fb25c 100644
  }
  
 diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
-index 806c197..7a2a67b 100644
+index 806c197..dfaa31c 100644
 --- a/dlls/wineusb.sys/wineusb.c
 +++ b/dlls/wineusb.sys/wineusb.c
-@@ -31,12 +31,17 @@
- #include "ddk/wdm.h"
- #include "ddk/usb.h"
- #include "ddk/usbioctl.h"
-+#include "setupapi.h"
- #include "wine/asm.h"
- #include "wine/debug.h"
- #include "wine/list.h"
+@@ -37,6 +37,10 @@
  
  #include "unixlib.h"
  
@@ -291,7 +293,7 @@ index 806c197..7a2a67b 100644
  WINE_DEFAULT_DEBUG_CHANNEL(wineusb);
  
  #ifdef __ASM_USE_FASTCALL_WRAPPER
-@@ -83,6 +88,9 @@ struct usb_device
+@@ -83,6 +87,9 @@ struct usb_device
  
      struct unix_device *unix_device;
  
@@ -301,35 +303,10 @@ index 806c197..7a2a67b 100644
      LIST_ENTRY irp_list;
  };
  
-@@ -140,6 +148,57 @@ static void add_unix_device(const struct usb_add_device_event *event)
+@@ -140,6 +147,32 @@ static void add_unix_device(const struct usb_add_device_event *event)
      device->revision = event->revision;
      device->usbver = event->usbver;
  
-+    /* Ensure a SetupAPI devnode exists for this PDO *before* the async
-+     * PnP enumeration thread can miss it.  This is needed because
-+     * IoInvalidateDeviceRelations is asynchronous and the wineserver may
-+     * exit before the PnP thread processes all invalidations, leaving
-+     * hub/root-hub PDOs without Enum tree entries. */
-+    {
-+        WCHAR instance_id[MAX_PATH];
-+        SP_DEVINFO_DATA sp = {sizeof(sp)};
-+        HDEVINFO set;
-+
-+        swprintf( instance_id, ARRAY_SIZE(instance_id),
-+                  L"USB\\VID_%04X&PID_%04X\\%u&%u&%u&%u",
-+                  device->vendor, device->product, device->usbver,
-+                  device->revision, device->busnum, device->portnum );
-+
-+        set = SetupDiCreateDeviceInfoList( NULL, NULL );
-+        if (set != INVALID_HANDLE_VALUE)
-+        {
-+            if (!SetupDiCreateDeviceInfoW( set, instance_id, &GUID_NULL,
-+                                           NULL, NULL, 0, &sp ))
-+                SetupDiOpenDeviceInfoW( set, instance_id, NULL, 0, &sp );
-+            SetupDiDestroyDeviceInfoList( set );
-+        }
-+    }
-+
 +    /* Register device interfaces at PDO creation time so that user-space
 +     * USB libraries (e.g. libusb Windows backend) can discover these PDOs
 +     * through SetupAPI device interface enumeration.  The START_DEVICE
@@ -359,7 +336,7 @@ index 806c197..7a2a67b 100644
      EnterCriticalSection(&wineusb_cs);
      list_add_tail(&device_list, &device->entry);
      LeaveCriticalSection(&wineusb_cs);
-@@ -480,6 +539,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -480,6 +513,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
          }
  
          case IRP_MN_START_DEVICE:
@@ -385,7 +362,7 @@ index 806c197..7a2a67b 100644
              ret = STATUS_SUCCESS;
              break;
  
-@@ -499,6 +577,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -499,6 +551,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
              assert(device->removed);
              remove_pending_irps(device);
  
