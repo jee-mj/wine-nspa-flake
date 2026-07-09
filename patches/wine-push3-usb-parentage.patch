@@ -72,7 +72,7 @@ index 75fb67b..213eb7f 100644
      ret = CM_Get_DevNode_PropertyW( node, &DEVPKEY_Device_Children, &type, (BYTE *)buffer, &len, 0 );
      ok_x4( ret, ==, CR_NO_SUCH_VALUE );
 diff --git a/dlls/ntoskrnl.exe/pnp.c b/dlls/ntoskrnl.exe/pnp.c
-index ebb8ba1..46e4e2c 100644
+index ebb8ba1..464e063 100644
 --- a/dlls/ntoskrnl.exe/pnp.c
 +++ b/dlls/ntoskrnl.exe/pnp.c
 @@ -419,18 +419,18 @@ static void create_dyn_data_key( DEVICE_OBJECT *device )
@@ -108,7 +108,15 @@ index ebb8ba1..46e4e2c 100644
      if (need_driver && !install_device_driver( device, set, &sp_device ) && !caps.RawDeviceOK)
      {
          ERR("Unable to install a function driver for device %s.\n", debugstr_w(device_instance_id));
-@@ -581,7 +585,7 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
+@@ -577,11 +581,15 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
+     for (i = 0; i < relations->Count; ++i)
+     {
+         DEVICE_OBJECT *child = relations->Objects[i];
++        WCHAR child_id[MAX_DEVICE_ID_LEN];
++
++        if (!get_device_instance_id( child, child_id ))
++            TRACE("bus child %p instance %s\n", child, debugstr_w(child_id));
+ 
          if (!wine_parent->children || !device_in_list( wine_parent->children, child ))
          {
              TRACE("Adding new device %p.\n", child);
