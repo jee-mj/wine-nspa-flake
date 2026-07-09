@@ -211,7 +211,7 @@ index 605b025..c8fb25c 100644
  }
  
 diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
-index 806c197..b0a84dc 100644
+index 806c197..4addbbd 100644
 --- a/dlls/wineusb.sys/wineusb.c
 +++ b/dlls/wineusb.sys/wineusb.c
 @@ -37,6 +37,10 @@
@@ -235,7 +235,7 @@ index 806c197..b0a84dc 100644
      LIST_ENTRY irp_list;
  };
  
-@@ -140,6 +147,20 @@ static void add_unix_device(const struct usb_add_device_event *event)
+@@ -140,6 +147,22 @@ static void add_unix_device(const struct usb_add_device_event *event)
      device->revision = event->revision;
      device->usbver = event->usbver;
  
@@ -248,6 +248,8 @@ index 806c197..b0a84dc 100644
 +
 +    if (!(device->interface) && device->class == 0x09)
 +    {
++        TRACE("registering hub GUID for VID %04x PID %04x class %02x interface %d\n",
++              device->vendor, device->product, device->class, device->interface);
 +        if (!(status = IoRegisterDeviceInterface( device_obj, &GUID_DEVINTERFACE_USB_HUB,
 +                                                   NULL, &device->hub_link_name )))
 +            IoSetDeviceInterfaceState( &device->hub_link_name, TRUE );
@@ -256,7 +258,7 @@ index 806c197..b0a84dc 100644
      EnterCriticalSection(&wineusb_cs);
      list_add_tail(&device_list, &device->entry);
      LeaveCriticalSection(&wineusb_cs);
-@@ -499,6 +520,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -499,6 +522,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
              assert(device->removed);
              remove_pending_irps(device);
  
