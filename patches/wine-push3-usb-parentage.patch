@@ -72,7 +72,7 @@ index 75fb67b..213eb7f 100644
      ret = CM_Get_DevNode_PropertyW( node, &DEVPKEY_Device_Children, &type, (BYTE *)buffer, &len, 0 );
      ok_x4( ret, ==, CR_NO_SUCH_VALUE );
 diff --git a/dlls/ntoskrnl.exe/pnp.c b/dlls/ntoskrnl.exe/pnp.c
-index ebb8ba1..a6cfd4b 100644
+index ebb8ba1..17669b1 100644
 --- a/dlls/ntoskrnl.exe/pnp.c
 +++ b/dlls/ntoskrnl.exe/pnp.c
 @@ -419,18 +419,18 @@ static void create_dyn_data_key( DEVICE_OBJECT *device )
@@ -108,10 +108,11 @@ index ebb8ba1..a6cfd4b 100644
      if (need_driver && !install_device_driver( device, set, &sp_device ) && !caps.RawDeviceOK)
      {
          ERR("Unable to install a function driver for device %s.\n", debugstr_w(device_instance_id));
-@@ -535,12 +539,16 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
+@@ -534,13 +538,16 @@ static BOOL device_in_list( const DEVICE_RELATIONS *list, const DEVICE_OBJECT *d
+ static void handle_bus_relations( DEVICE_OBJECT *parent )
  {
      struct wine_device *wine_parent = CONTAINING_RECORD(parent, struct wine_device, device_obj);
-     SP_DEVINFO_DATA sp_device = {sizeof(sp_device)};
+-    SP_DEVINFO_DATA sp_device = {sizeof(sp_device)};
 +    SP_DEVINFO_DATA parent_sp = {sizeof(parent_sp)};
 +    WCHAR parent_id[MAX_DEVICE_ID_LEN];
 +    WCHAR (*child_ids)[MAX_DEVICE_ID_LEN] = NULL;
@@ -125,16 +126,21 @@ index ebb8ba1..a6cfd4b 100644
      ULONG i;
  
      TRACE( "(%p)\n", parent );
-@@ -581,7 +589,7 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
-         if (!wine_parent->children || !device_in_list( wine_parent->children, child ))
-         {
-             TRACE("Adding new device %p.\n", child);
+@@ -577,12 +584,7 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
+     for (i = 0; i < relations->Count; ++i)
+     {
+         DEVICE_OBJECT *child = relations->Objects[i];
+-
+-        if (!wine_parent->children || !device_in_list( wine_parent->children, child ))
+-        {
+-            TRACE("Adding new device %p.\n", child);
 -            enumerate_new_device( child, set );
-+            enumerate_new_device( child, set, parent );
-         }
+-        }
++        enumerate_new_device( child, set, parent );
      }
  
-@@ -603,6 +611,38 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
+     if (wine_parent->children)
+@@ -603,6 +605,38 @@ static void handle_bus_relations( DEVICE_OBJECT *parent )
      ExFreePool( wine_parent->children );
      wine_parent->children = relations;
  
