@@ -270,10 +270,17 @@ index 605b025..c8fb25c 100644
  }
  
 diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
-index 806c197..b53e3a5 100644
+index 806c197..7a2a67b 100644
 --- a/dlls/wineusb.sys/wineusb.c
 +++ b/dlls/wineusb.sys/wineusb.c
-@@ -37,6 +37,10 @@
+@@ -31,12 +31,17 @@
+ #include "ddk/wdm.h"
+ #include "ddk/usb.h"
+ #include "ddk/usbioctl.h"
++#include "setupapi.h"
+ #include "wine/asm.h"
+ #include "wine/debug.h"
+ #include "wine/list.h"
  
  #include "unixlib.h"
  
@@ -284,7 +291,7 @@ index 806c197..b53e3a5 100644
  WINE_DEFAULT_DEBUG_CHANNEL(wineusb);
  
  #ifdef __ASM_USE_FASTCALL_WRAPPER
-@@ -83,6 +87,9 @@ struct usb_device
+@@ -83,6 +88,9 @@ struct usb_device
  
      struct unix_device *unix_device;
  
@@ -294,7 +301,7 @@ index 806c197..b53e3a5 100644
      LIST_ENTRY irp_list;
  };
  
-@@ -140,6 +147,57 @@ static void add_unix_device(const struct usb_add_device_event *event)
+@@ -140,6 +148,57 @@ static void add_unix_device(const struct usb_add_device_event *event)
      device->revision = event->revision;
      device->usbver = event->usbver;
  
@@ -352,7 +359,7 @@ index 806c197..b53e3a5 100644
      EnterCriticalSection(&wineusb_cs);
      list_add_tail(&device_list, &device->entry);
      LeaveCriticalSection(&wineusb_cs);
-@@ -480,6 +538,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -480,6 +539,25 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
          }
  
          case IRP_MN_START_DEVICE:
@@ -378,7 +385,7 @@ index 806c197..b53e3a5 100644
              ret = STATUS_SUCCESS;
              break;
  
-@@ -499,6 +576,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+@@ -499,6 +577,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
              assert(device->removed);
              remove_pending_irps(device);
  
