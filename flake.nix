@@ -30,19 +30,30 @@
         version = "11.8";
         src = wine-nspa-src;
 
-        patches = builtins.filter
+        patches = (builtins.filter
           (p: ! (builtins.match ".*add-dll-accept-device-paths.*" (builtins.unsafeDiscardStringContext (toString p)) != null))
-          (prev.patches or [ ]);
+          (prev.patches or [ ]))
+          ++ [ ./patches/winejack-midi-caps-names.patch
+               ./patches/wine-push3-usb-parentage.patch ];
 
         buildInputs = (prev.buildInputs or [ ]) ++ [
           pkgs.libjack2
           pkgs.liburing
         ];
 
-        configureFlags = (prev.configureFlags or [ ]) ++ [
-          "--enable-nspa-arch=v3"
-          "--with-uring"
-        ];
+        # Inherit configure flags from unstableFull but drop --with-wayland.
+        # The experimental Wine Wayland driver causes popup-menu artifacts,
+        # modal-dialog deadlocks, and plugin-loading freezes in FL Studio &
+        # Ableton on Wayland hosts.  XWayland (the x11 driver) is battle-tested;
+        # let it handle rendering while the Wayland driver matures.
+        # See: github.com/nine7nine/Wine-NSPA/issues/4 (popup/blank menu bugs)
+        configureFlags = builtins.filter
+          (flag: flag != "--with-wayland")
+          (prev.configureFlags or [ ])
+          ++ [
+            "--enable-nspa-arch=v3"
+            "--with-uring"
+          ];
 
         meta = (prev.meta or { }) // {
           description = "Wine-NSPA 11.8 — PREEMPT_RT Wine fork (decoration-loop fix + PI)";
