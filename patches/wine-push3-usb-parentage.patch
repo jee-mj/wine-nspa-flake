@@ -195,3 +195,65 @@ index 605b025..c8fb25c 100644
      SetupDiDestroyDeviceInfoList(set);
  }
  
+diff --git a/dlls/wineusb.sys/wineusb.c b/dlls/wineusb.sys/wineusb.c
+index 806c197..f138a17 100644
+--- a/dlls/wineusb.sys/wineusb.c
++++ b/dlls/wineusb.sys/wineusb.c
+@@ -37,6 +37,10 @@
+ 
+ #include "unixlib.h"
+ 
++#include "initguid.h"
++DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10, 0x6530, 0x11D2, 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED);
++DEFINE_GUID(GUID_DEVINTERFACE_USB_HUB, 0xF18A0E88, 0xC30C, 0x11D0, 0x88, 0x15, 0x00, 0xA0, 0xC9, 0x06, 0xBE, 0xD8);
++
+ WINE_DEFAULT_DEBUG_CHANNEL(wineusb);
+ 
+ #ifdef __ASM_USE_FASTCALL_WRAPPER
+@@ -83,6 +87,9 @@ struct usb_device
+ 
+     struct unix_device *unix_device;
+ 
++    UNICODE_STRING link_name;
++    UNICODE_STRING hub_link_name;
++
+     LIST_ENTRY irp_list;
+ };
+ 
+@@ -480,6 +487,21 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+         }
+ 
+         case IRP_MN_START_DEVICE:
++            if ((ret = IoRegisterDeviceInterface( device_obj, &GUID_DEVINTERFACE_USB_DEVICE,
++                                                  NULL, &device->link_name )))
++            {
++                ERR( "Failed to register USB device interface, status %#lx.\n", ret );
++                break;
++            }
++            IoSetDeviceInterfaceState( &device->link_name, TRUE );
++
++            if (device->class == 0x09 && !(device->interface))
++            {
++                if (!(ret = IoRegisterDeviceInterface( device_obj, &GUID_DEVINTERFACE_USB_HUB,
++                                                       NULL, &device->hub_link_name )))
++                    IoSetDeviceInterfaceState( &device->hub_link_name, TRUE );
++            }
++
+             ret = STATUS_SUCCESS;
+             break;
+ 
+@@ -499,6 +521,14 @@ static NTSTATUS pdo_pnp(DEVICE_OBJECT *device_obj, IRP *irp)
+             assert(device->removed);
+             remove_pending_irps(device);
+ 
++            IoSetDeviceInterfaceState( &device->link_name, FALSE );
++            if (device->hub_link_name.Buffer)
++            {
++                IoSetDeviceInterfaceState( &device->hub_link_name, FALSE );
++                RtlFreeUnicodeString( &device->hub_link_name );
++            }
++            RtlFreeUnicodeString( &device->link_name );
++
+             destroy_unix_device(device->unix_device);
+ 
+             IoDeleteDevice(device->device_obj);
