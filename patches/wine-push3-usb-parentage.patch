@@ -235,6 +235,29 @@ index 0c1361d..3783f04 100644
      ret = SetupDiEnumDeviceInterfaces(set, NULL, &child_class, 0, &iface);
      ok(ret, "failed to get interface, error %#lx\n", GetLastError());
      ok(IsEqualGUID(&iface.InterfaceClassGuid, &child_class),
+diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
+index f6bfcc4..3032ab8 100644
+--- a/dlls/setupapi/devinst.c
++++ b/dlls/setupapi/devinst.c
+@@ -385,6 +385,18 @@ static BOOL is_linked(HKEY key)
+         RegCloseKey(control_key);
+     }
+ 
++    /* Fallback: accept any interface with a non-empty SymbolicLink as
++     * active.  This covers device interfaces whose volatile Control\Linked
++     * key was lost across a wineserver restart but whose persistent
++     * registry entries are intact. */
++    if (!ret)
++    {
++        size = 0;
++        if (RegQueryValueExW(key, L"SymbolicLink", NULL, &type, NULL, &size) == ERROR_SUCCESS
++                && type == REG_SZ && size > 2)
++            ret = TRUE;
++    }
++
+     return ret;
+ }
+ 
 diff --git a/dlls/setupapi/setupapi.spec b/dlls/setupapi/setupapi.spec
 index 908019b..bb0bdb3 100644
 --- a/dlls/setupapi/setupapi.spec
