@@ -89,7 +89,7 @@
 ### 3. NixOS integration
 
 **Status:** Not done.  Requires:
-1. Add `inputs.wine-nspa.url = "path:/path/to/wine-nspa-flake";` to `.site/flake.nix`
+1. Add `inputs.wine-nspa.url = "github:jee-mj/wine-nspa-flake";` to `.site/flake.nix`
 2. Change `winePackage = pkgs.wineWow64Packages.stableFull;` to `winePackage = inputs.wine-nspa.packages.x86_64-linux.wine-nspa;`
 3. Rebuild and test
 
