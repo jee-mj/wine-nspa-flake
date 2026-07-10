@@ -1,8 +1,8 @@
 diff --git a/dlls/winejack.drv/jackmidi.c b/dlls/winejack.drv/jackmidi.c
-index 982cd2f..3134087 100644
+index 982cd2f..44a82eb 100644
 --- a/dlls/winejack.drv/jackmidi.c
 +++ b/dlls/winejack.drv/jackmidi.c
-@@ -240,15 +240,72 @@ static void jack_midi_cleanup_ringbufs(void)
+@@ -240,15 +240,83 @@ static void jack_midi_cleanup_ringbufs(void)
  
  /* ── Port enumeration ── */
  
@@ -30,9 +30,9 @@ index 982cd2f..3134087 100644
 +{
 +    static const char midi_bridge_prefix[] = "Midi-Bridge:";
 +    char buf[128];
-+    char *end;
 +    const char *p = name;
-+    size_t i = 0;
++    const char *colon;
++    char *end;
 +
 +    /*
 +     * WinMM exposes only MAXPNAMELEN WCHARs, so WineJACK used to keep just
@@ -42,28 +42,39 @@ index 982cd2f..3134087 100644
 +     *   Midi-Bridge:Ableton Push 3: Live Port (capture)
 +     *
 +     * Keeping only the final component exposes " Live Port (capture)" to
-+     * Windows apps.  Ableton's Push3.exe enumerates MIDI devices by WinMM caps
-+     * name and expects the device prefix, e.g. "Ableton Push 3 Live Port";
-+     * with the stripped name it rejects every device before midiInOpen().
++     * Windows apps.  Ableton's Push3.exe enumerates MIDI devices by WinMM
++     * caps name and matches with std::regex_match(name + " " + index, re).
++     * The embedded regex expects the device-name component only:
 +     *
-+     * Preserve the useful JACK client/port components while dropping the
-+     * generic PipeWire bridge prefix and the direction suffix added by JACK.
++     *   Ableton Push 3 (\\d*|Live Port|MIDI [0-9]+|[0-9][0-9]:0)
++     *
++     * With the old stripped name the helper rejects every device before
++     * midiInOpen().  With a prefix-preserving name like "Ableton Push 3
++     * Live Port" the regex still fails because the trailing " Live Port"
++     * leaves unconsumed characters after the index-concatenated match.
++     *
++     * Preserve only the JACK client (device) name — the segment between
++     * the "Midi-Bridge:" prefix and the first colon after it.  Drop the
++     * direction suffix added by the bridge.
 +     */
 +    if (!strncmp(p, midi_bridge_prefix, strlen(midi_bridge_prefix)))
 +        p += strlen(midi_bridge_prefix);
 +
-+    while (*p && i < sizeof(buf) - 1)
++    colon = strchr(p, ':');
++    if (colon)
 +    {
-+        if (*p == ':')
-+        {
-+            while (*++p == ' ');
-+            if (i && buf[i - 1] != ' ' && i < sizeof(buf) - 1)
-+                buf[i++] = ' ';
-+            continue;
-+        }
-+        buf[i++] = *p++;
++        size_t n = colon - p;
++        if (n >= sizeof(buf)) n = sizeof(buf) - 1;
++        memcpy(buf, p, n);
++        buf[n] = 0;
 +    }
-+    buf[i] = 0;
++    else
++    {
++        size_t n = strlen(p);
++        if (n >= sizeof(buf)) n = sizeof(buf) - 1;
++        memcpy(buf, p, n);
++        buf[n] = 0;
++    }
 +
 +    remove_caps_suffix(buf, " (capture)");
 +    remove_caps_suffix(buf, " (playback)");
