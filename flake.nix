@@ -1,5 +1,5 @@
 {
-  description = "Wine-NSPA 11.8 + Linux-NSPA 7.0.12 — inputs for .site Ableton lab";
+  description = "Wine-NSPA 11.8 + Linux-NSPA 7.1.1 — inputs for .site Ableton lab";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -63,19 +63,26 @@
       });
 
       linux-nspaPackages = pkgs.linuxPackagesFor (pkgs.buildLinux {
-        version = "7.0.12";
-        modDirVersion = "7.0.12-rt2";
+        version = "7.1.1";
+        modDirVersion = "7.1.1-rt2";
 
         src = pkgs.fetchurl {
-          url = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.0.12.tar.xz";
-          hash = "sha256-V+3JpB78HKa3l6+o9KWHow2ir2vKc1brVuHhpK2iZdo=";
+          url = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.1.1.tar.xz";
+          hash = "sha256-UhX6NUHcfn9bzVG/flfxac7G/OUIylTj3IX97hQ3HX0=";
         };
 
-        kernelPatches = map (name: {
+        kernelPatches = [
+          {
+            name = "patch-7.1.1-rt2.patch";
+            patch = pkgs.fetchurl {
+              url = "https://cdn.kernel.org/pub/linux/kernel/projects/rt/7.1/patch-7.1.1-rt2.patch.xz";
+              hash = "sha256-pb0ELCQ6Ml+mu8wlOExv0ulXC726EjW5Lf2d5QvJkJA=";
+            };
+          }
+        ] ++ map (name: {
           name = builtins.baseNameOf name;
           patch = "${linux-nspa-kernel}/linux-nspa/${name}";
         }) [
-          "0000-patch-7.0.1-rt2.patch"
           "1001-ntsync-preempt-rt-lock-hardening.patch"
           "1002-ntsync-priority-ordered-waiter-queues.patch"
           "1003-ntsync-mutex-owner-pi-boost.patch"
@@ -97,7 +104,7 @@
         '';
 
         meta = {
-          description = "Linux-NSPA 7.0.12 — PREEMPT_RT kernel with ntsync PI for Wine-NSPA";
+          description = "Linux-NSPA 7.1.1 — PREEMPT_RT kernel with ntsync PI for Wine-NSPA";
           homepage = "https://github.com/nine7nine/Linux-NSPA-pkgbuild";
           platforms = [ "x86_64-linux" ];
         };
@@ -122,6 +129,7 @@
 
       checks.${system} = {
         inherit wine-nspa linux-nspa;
+        linux-nspa-kernel = linux-nspaPackages.kernel;
       };
     };
 }
