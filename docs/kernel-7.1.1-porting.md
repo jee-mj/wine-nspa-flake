@@ -95,3 +95,10 @@ configuration was changed.
 
 - The fixed modules output is `/nix/store/94irl21ybazfsl2107api283yqjh3l8z-linux-7.1.1-modules` and contains `lib/modules/7.1.1-rt2/`; therefore the actual `modDirVersion` is `7.1.1-rt2`.
 - `nix eval --raw .#legacyPackages.x86_64-linux.linux-nspaPackages.kernel.version` returned `7.1.1`.
+
+## Downstream integration build
+
+- The downstream toplevel derivation `/nix/store/<hash>-nixos-system-<redacted>.drv` completed with exit status 0 on 2026-07-19.
+- Closure inspection identified one external kernel module: `/nix/store/90cqf9mw1ngsn318kq0klc3jpynnqdcs-nvidia-kernel-modules-595.71.05-7.1.1.drv`. It was present in the completed toplevel closure, so no separate module build was required.
+- The NVIDIA derivation takes `/nix/store/gxap53a0ahff8rmpvbp2xnicyg0dqqya-linux-7.1.1.drv` as its kernel development input and configures `KBUILD_OUTPUT`, `SYSSRC`, and `MODLIB` for `lib/modules/7.1.1-rt2`. The realised NVIDIA module result therefore targets the exact `7.1.1-rt2` module directory.
+- No other external kernel-module derivation was identified in the toplevel closure. The individual NVIDIA build log was unavailable because its result was already realised.
