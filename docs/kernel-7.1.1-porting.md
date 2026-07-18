@@ -98,7 +98,7 @@ configuration was changed.
 
 ## Downstream integration build
 
-- The downstream toplevel derivation `/nix/store/<hash>-nixos-system-<redacted>.drv` completed with exit status 0 on 2026-07-19.
-- Closure inspection identified one external kernel module: `/nix/store/90cqf9mw1ngsn318kq0klc3jpynnqdcs-nvidia-kernel-modules-595.71.05-7.1.1.drv`. It was present in the completed toplevel closure, so no separate module build was required.
-- The NVIDIA derivation takes `/nix/store/gxap53a0ahff8rmpvbp2xnicyg0dqqya-linux-7.1.1.drv` as its kernel development input and configures `KBUILD_OUTPUT`, `SYSSRC`, and `MODLIB` for `lib/modules/7.1.1-rt2`. The realised NVIDIA module result therefore targets the exact `7.1.1-rt2` module directory.
-- No other external kernel-module derivation was identified in the toplevel closure. The individual NVIDIA build log was unavailable because its result was already realised.
+- The downstream toplevel derivation `/nix/store/841lkx6rjlnhspi02injjp2jzh30qbmg-nixos-system-<redacted>.drv` completed with exit status 0 on 2026-07-19. The store hash is the actual derivation identity; its name is redacted to avoid publishing downstream details.
+- Closure inspection used `nix-store --query --requisites "$toplevel" | rg '/[^/]*-(linux-7\\.1\\.1-modules|nvidia-kernel-modules)'` and returned the two kernel module outputs plus `/nix/store/r8a4z3nz0m83h6dak8lz43hr2r77gr80-nvidia-kernel-modules-595.71.05-7.1.1`. NVIDIA was the only external kernel module, and it was already in the toplevel closure.
+- The log-enabled reproducibility check `nix-store --realise --check /nix/store/90cqf9mw1ngsn318kq0klc3jpynnqdcs-nvidia-kernel-modules-595.71.05-7.1.1.drv` exited 0. Its streamed builder log compiled the NVIDIA modules and installed them below `lib/modules/7.1.1-rt2/kernel/drivers/video/`.
+- The NVIDIA derivation consumes `/nix/store/gxap53a0ahff8rmpvbp2xnicyg0dqqya-linux-7.1.1.drv` as its kernel development input. Its check-build log sets `KBUILD_OUTPUT`, `SYSSRC`, `SYSOUT`, and `MODLIB` for `7.1.1-rt2`; no separately built external module was required.
