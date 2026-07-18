@@ -173,3 +173,13 @@ result/bin/wine --version   # should print "wine-11.8" (NSPA)
 # Test in Ableton prefix
 WINEPREFIX=/path/to/wine/prefix result/bin/wine --version
 ```
+
+## Linux-NSPA kernel baseline
+
+The NSPA kernel is based on Linux 7.1.1 with the exact upstream
+`7.1.1-rt2` PREEMPT_RT patch. The accompanying NSPA patch series is reviewed
+as a semantic port from Linux 7.0.12. Build the reproducible kernel gate with:
+
+```sh
+nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link
+```

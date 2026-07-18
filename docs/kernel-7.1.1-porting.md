@@ -36,3 +36,51 @@
 
 - `nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link` completed with exit status 0 on 2026-07-18.
 - The completed derivation is `/nix/store/bisdf0gdrsrw07yqqcml0lqcnmbgxx58-linux-7.1.1.drv`; its registered kernel output is `/nix/store/pqkg11867jx9p967h0grw60qsgkcak7n-linux-7.1.1`.
+
+## Normalized configuration validation
+
+Validation source: the input is
+`/nix/store/8b2bgbnilbaqjp1k27jxw3zi66k5l2v5-source/linux-nspa/config`;
+the effective configuration is
+`/nix/store/02lq0vii4gkh29zhbv22gb5yr42mlfag-linux-7.1.1-dev/lib/modules/7.1.1-rt2/build/.config`.
+The latter is copied from the build root after `make oldconfig`, so it is the
+normalized configuration used to build the recorded kernel output.
+
+`diff -u` reported 8,839 changed configuration lines (3,353 removed and 5,486
+added). This is a broad upstream Kconfig normalization, not an accepted
+equivalence. The material NSPA/latency settings are:
+
+| Symbol or effective mode | Input `linux-nspa/config` | Built normalized `.config` | Result |
+| --- | --- | --- | --- |
+| `CONFIG_PREEMPT_RT` | `y` | not set | **FAIL: required RT preemption was silently disabled.** |
+| `CONFIG_NTSYNC` | `y` | `y` | Pass |
+| `CONFIG_HIGH_RES_TIMERS` | `y` | `y` | Pass |
+| Timer frequency | `CONFIG_HZ_1000=y`, `CONFIG_HZ=1000` | `CONFIG_HZ_1000=y`, `CONFIG_HZ=1000` | Pass: 1000 Hz |
+| Tick mode | `CONFIG_NO_HZ=y`, `CONFIG_NO_HZ_FULL=y`, `NO_HZ_IDLE` unset | same | Pass: full dynticks (`NO_HZ_FULL`) |
+| `CONFIG_IRQ_FORCED_THREADING` | `y` | `y` | Preserved |
+| `CONFIG_CPU_ISOLATION` | `y` | `y` | Preserved |
+| `CONFIG_RCU_NOCB_CPU` | `y` | `y` | Preserved |
+| `CONFIG_RCU_NOCB_CPU_CB_BOOST` | `y` | absent | Changed: symbol was removed during normalization; review required. |
+| `CONFIG_RT_MUTEXES` | `y` | `y` | Preserved |
+| `CONFIG_RT_GROUP_SCHED` | unset | unset | Preserved |
+| `CONFIG_PREEMPT_LAZY` | `y` | `y` | Preserved; it coexists with the failed RT selection in the input. |
+| `CONFIG_DEBUG_PREEMPT` | `y` | unset | Changed: debug preemption was disabled. |
+
+This port is **not accepted as an NSPA PREEMPT_RT baseline**. Although the
+kernel derivation builds and `NTSYNC` is enabled, the required
+`CONFIG_PREEMPT_RT=y` condition is false in the actual built configuration.
+The unrelated normalization changes remain unreviewed; no downstream
+configuration was changed.
+
+## Built output metadata
+
+- `nix path-info .#checks.x86_64-linux.linux-nspa-kernel` returned
+  `/nix/store/pqkg11867jx9p967h0grw60qsgkcak7n-linux-7.1.1`.
+- `nix-store --query --outputs /nix/store/bisdf0gdrsrw07yqqcml0lqcnmbgxx58-linux-7.1.1.drv`
+  returned the kernel output above plus
+  `/nix/store/02lq0vii4gkh29zhbv22gb5yr42mlfag-linux-7.1.1-dev` and
+  `/nix/store/c0dnfh447daiypyaz91iwypjmmw4zmrk-linux-7.1.1-modules`.
+- The built modules output contains `lib/modules/7.1.1-rt2/`; therefore the
+  actual `modDirVersion` is `7.1.1-rt2`.
+- `nix eval --raw .#legacyPackages.x86_64-linux.linux-nspaPackages.kernel.version`
+  returned `7.1.1`.
