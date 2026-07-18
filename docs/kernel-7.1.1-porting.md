@@ -98,7 +98,7 @@ configuration was changed.
 
 ## Downstream integration build
 
-- The downstream toplevel derivation `/nix/store/841lkx6rjlnhspi02injjp2jzh30qbmg-nixos-system-<redacted>.drv` completed with exit status 0 on 2026-07-19. The store hash is the actual derivation identity; its name is redacted to avoid publishing downstream details.
-- Closure inspection used `nix-store --query --requisites "$toplevel" | rg '/[^/]*-(linux-7\\.1\\.1-modules|nvidia-kernel-modules)'` and returned the two kernel module outputs plus `/nix/store/r8a4z3nz0m83h6dak8lz43hr2r77gr80-nvidia-kernel-modules-595.71.05-7.1.1`. NVIDIA was the only external kernel module, and it was already in the toplevel closure.
-- The log-enabled reproducibility check `nix-store --realise --check /nix/store/90cqf9mw1ngsn318kq0klc3jpynnqdcs-nvidia-kernel-modules-595.71.05-7.1.1.drv` exited 0. Its streamed builder log compiled the NVIDIA modules and installed them below `lib/modules/7.1.1-rt2/kernel/drivers/video/`.
-- The NVIDIA derivation consumes `/nix/store/gxap53a0ahff8rmpvbp2xnicyg0dqqya-linux-7.1.1.drv` as its kernel development input. Its check-build log sets `KBUILD_OUTPUT`, `SYSSRC`, `SYSOUT`, and `MODLIB` for `7.1.1-rt2`; no separately built external module was required.
+- The downstream integration build completed successfully on 2026-07-19.
+- Closure inspection confirmed the kernel modules and the sole external NVIDIA kernel module were present in the downstream toplevel closure.
+- The log-enabled reproducibility check compiled and installed the NVIDIA modules below `lib/modules/7.1.1-rt2/kernel/drivers/video/`.
+- The NVIDIA module build uses the kernel development inputs with matching build and module paths; no separately built external module was required.
