@@ -58,9 +58,32 @@ configuration at
 - `CONFIG_HIGH_RES_TIMERS=y`
 
 This check failed against the pre-fix configuration because PREEMPT_RT was
-unset. A complete post-fix kernel rebuild is required to record the new output
-path and final installed-config values; no downstream configuration was
-changed.
+unset. Post-fix evidence, recorded on 2026-07-19, is:
+
+```sh
+nix build .#checks.x86_64-linux.linux-nspa-config --no-link --print-out-paths
+# /nix/store/bbi0n8cbp45g1rvrz9xzd5z66fhi85kn-linux-nspa-config
+
+nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link --print-out-paths
+# /nix/store/7s0z3gx3fw3xyj1hp4l1ibbvjmifvriy-linux-7.1.1
+```
+
+Both commands exited zero from cached outputs. The installed configuration at
+`/nix/store/k5ih4ga6f1yhlyg74d2gbp7m50m8cxys-linux-7.1.1-dev/lib/modules/7.1.1-rt2/build/.config`
+contains:
+
+```text
+# CONFIG_NO_HZ_IDLE is not set
+CONFIG_NO_HZ_FULL=y
+CONFIG_NO_HZ=y
+CONFIG_HIGH_RES_TIMERS=y
+CONFIG_PREEMPT_RT=y
+CONFIG_HZ_1000=y
+CONFIG_HZ=1000
+CONFIG_NTSYNC=y
+```
+
+No downstream configuration was changed.
 
 ## Built output metadata
 
