@@ -34,8 +34,8 @@
 
 ## Build evidence
 
-- `nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link` completed with exit status 0 on 2026-07-18.
-- The completed derivation is `/nix/store/bisdf0gdrsrw07yqqcml0lqcnmbgxx58-linux-7.1.1.drv`; its registered kernel output is `/nix/store/pqkg11867jx9p967h0grw60qsgkcak7n-linux-7.1.1`.
+- `nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link --print-out-paths` exited zero on 2026-07-19 and returned `/nix/store/7s0z3gx3fw3xyj1hp4l1ibbvjmifvriy-linux-7.1.1`.
+- `nix-store --query --outputs` for the fixed kernel derivation returned the kernel output above, `/nix/store/k5ih4ga6f1yhlyg74d2gbp7m50m8cxys-linux-7.1.1-dev`, and `/nix/store/94irl21ybazfsl2107api283yqjh3l8z-linux-7.1.1-modules`.
 
 ## Normalized configuration validation
 
@@ -50,50 +50,48 @@ the built configuration.
 `flake.nix` now explicitly sets both `NTSYNC y` and `PREEMPT_RT y` in
 `extraConfig`. The fixed flake exposes
 `checks.x86_64-linux.linux-nspa-config`, which reads the installed build
-configuration at
-`$kernel.dev/lib/modules/$kernel.modDirVersion/build/.config` and requires:
-
-- `CONFIG_PREEMPT_RT=y`
-- `CONFIG_NTSYNC=y` or `CONFIG_NTSYNC=m`
-- `CONFIG_HIGH_RES_TIMERS=y`
+configuration at `$kernel.dev/lib/modules/$kernel.modDirVersion/build/.config`
+and asserts the RT, timer, tickless, and NSPA-critical baseline below.
 
 This check failed against the pre-fix configuration because PREEMPT_RT was
 unset. Post-fix evidence, recorded on 2026-07-19, is:
 
 ```sh
 nix build .#checks.x86_64-linux.linux-nspa-config --no-link --print-out-paths
-# /nix/store/bbi0n8cbp45g1rvrz9xzd5z66fhi85kn-linux-nspa-config
+# /nix/store/kl8rdajzdi59l99z1d5air1gnvs971k6-linux-nspa-config
 
 nix build .#checks.x86_64-linux.linux-nspa-kernel --no-link --print-out-paths
 # /nix/store/7s0z3gx3fw3xyj1hp4l1ibbvjmifvriy-linux-7.1.1
 ```
 
-Both commands exited zero from cached outputs. The installed configuration at
+Both commands exited zero; the kernel output was cached while the strengthened
+configuration check was rebuilt. The material comparison of
+`linux-nspa/config` and the installed fixed configuration at
 `/nix/store/k5ih4ga6f1yhlyg74d2gbp7m50m8cxys-linux-7.1.1-dev/lib/modules/7.1.1-rt2/build/.config`
-contains:
+is:
 
-```text
-# CONFIG_NO_HZ_IDLE is not set
-CONFIG_NO_HZ_FULL=y
-CONFIG_NO_HZ=y
-CONFIG_HIGH_RES_TIMERS=y
-CONFIG_PREEMPT_RT=y
-CONFIG_HZ_1000=y
-CONFIG_HZ=1000
-CONFIG_NTSYNC=y
-```
+| Setting | `linux-nspa/config` | Fixed built `.config` | Assessment |
+| --- | --- | --- | --- |
+| `CONFIG_PREEMPT_RT` | `y` | `y` | Preserved; explicitly selected by `extraConfig`. |
+| `CONFIG_NTSYNC` | `y` | `y` | Preserved. |
+| `CONFIG_HIGH_RES_TIMERS` | `y` | `y` | Preserved. |
+| `CONFIG_HZ_1000`, `CONFIG_HZ` | `y`, `1000` | `y`, `1000` | Preserved 1000 Hz timer frequency. |
+| `CONFIG_NO_HZ`, `CONFIG_NO_HZ_FULL`, `CONFIG_NO_HZ_IDLE` | `y`, `y`, unset | `y`, `y`, unset | Preserved full-dynticks mode; idle-only tickless mode remains disabled. |
+| `CONFIG_IRQ_FORCED_THREADING` | `y` | `y` | Preserved. |
+| `CONFIG_CPU_ISOLATION` | `y` | `y` | Preserved. |
+| `CONFIG_RCU_NOCB_CPU` | `y` | `y` | Preserved. |
+| `CONFIG_RCU_NOCB_CPU_CB_BOOST` | `y` | `y` | Preserved; it is emitted by the fixed config. |
+| `CONFIG_RT_MUTEXES` | `y` | `y` | Preserved. |
+| `CONFIG_RT_GROUP_SCHED` | unset | unset | Preserved. |
+| `CONFIG_PREEMPT_LAZY` | `y` | `y` | Preserved. |
+| `CONFIG_DEBUG_PREEMPT` | `y` | unset | Kconfig normalization disables debug preemption in the fixed build; this is the only material difference in this comparison and is asserted as unset. |
 
-No downstream configuration was changed.
+No listed material symbol is absent from the fixed configuration. In
+particular, the earlier pre-fix report that `CONFIG_RCU_NOCB_CPU_CB_BOOST` was
+not emitted is superseded by the fixed build evidence above. No downstream
+configuration was changed.
 
 ## Built output metadata
 
-- `nix path-info .#checks.x86_64-linux.linux-nspa-kernel` returned
-  `/nix/store/pqkg11867jx9p967h0grw60qsgkcak7n-linux-7.1.1`.
-- `nix-store --query --outputs /nix/store/bisdf0gdrsrw07yqqcml0lqcnmbgxx58-linux-7.1.1.drv`
-  returned the kernel output above plus
-  `/nix/store/02lq0vii4gkh29zhbv22gb5yr42mlfag-linux-7.1.1-dev` and
-  `/nix/store/c0dnfh447daiypyaz91iwypjmmw4zmrk-linux-7.1.1-modules`.
-- The built modules output contains `lib/modules/7.1.1-rt2/`; therefore the
-  actual `modDirVersion` is `7.1.1-rt2`.
-- `nix eval --raw .#legacyPackages.x86_64-linux.linux-nspaPackages.kernel.version`
-  returned `7.1.1`.
+- The fixed modules output is `/nix/store/94irl21ybazfsl2107api283yqjh3l8z-linux-7.1.1-modules` and contains `lib/modules/7.1.1-rt2/`; therefore the actual `modDirVersion` is `7.1.1-rt2`.
+- `nix eval --raw .#legacyPackages.x86_64-linux.linux-nspaPackages.kernel.version` returned `7.1.1`.
