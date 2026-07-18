@@ -101,6 +101,7 @@
 
         extraConfig = ''
           NTSYNC y
+          PREEMPT_RT y
         '';
 
         meta = {
@@ -130,6 +131,13 @@
       checks.${system} = {
         inherit wine-nspa linux-nspa;
         linux-nspa-kernel = linux-nspaPackages.kernel;
+        linux-nspa-config = pkgs.runCommand "linux-nspa-config" { } ''
+          config=${linux-nspaPackages.kernel.dev}/lib/modules/${linux-nspaPackages.kernel.modDirVersion}/build/.config
+          grep -qx 'CONFIG_PREEMPT_RT=y' "$config"
+          grep -Eq '^CONFIG_NTSYNC=(y|m)$' "$config"
+          grep -qx 'CONFIG_HIGH_RES_TIMERS=y' "$config"
+          touch "$out"
+        '';
       };
     };
 }
